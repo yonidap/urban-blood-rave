@@ -30,6 +30,15 @@ target.mkdir(parents=True)
 with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as tf:
     tf.extractall(target)
 
+# v2.26 overlay: Web Push / iPhone PWA support. Keeping this as an overlay
+# lets the existing binary asset bundle remain untouched while replacing only
+# the files that changed.
+overlay_file = ROOT / "overlay_v226.b64"
+if overlay_file.exists():
+    overlay_archive = base64.b64decode(overlay_file.read_text(encoding="utf-8").strip(), validate=True)
+    with tarfile.open(fileobj=io.BytesIO(overlay_archive), mode="r:gz") as tf:
+        tf.extractall(target)
+
 required = [
     target / "app.py",
     target / "requirements.txt",
@@ -37,9 +46,11 @@ required = [
     target / "public" / "player.html",
     target / "public" / "host.html",
     target / "public" / "fire_overlay.webm",
+    target / "public" / "sw.js",
+    target / "public" / "manifest.webmanifest",
 ]
 missing_required = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
 if missing_required:
     raise SystemExit(f"Deployment bundle is incomplete: {missing_required}")
 
-print("Urban Blood Rave deployment bundle extracted successfully.")
+print("Urban Blood Rave deployment bundle extracted successfully (v2.26 Web Push overlay applied).")
