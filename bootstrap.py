@@ -1,5 +1,6 @@
 from pathlib import Path
 import base64
+import gzip
 import io
 import shutil
 import tarfile
@@ -114,6 +115,14 @@ for old, new in patches:
 
 player.write_text(html, encoding="utf-8")
 
+# v2.27 reveal hotfix: remove the synthetic flame video entirely and replace
+# the public vote reveal with a cinematic burn/dissolve + embers treatment.
+screen_hotfix = ROOT / "screen_v227.b64"
+if not screen_hotfix.exists():
+    raise SystemExit("Missing v2.27 screen reveal hotfix")
+screen_bytes = gzip.decompress(base64.b64decode(screen_hotfix.read_text(encoding="utf-8").strip(), validate=True))
+(target / "public" / "screen.html").write_bytes(screen_bytes)
+
 required = [
     target / "app.py",
     target / "requirements.txt",
@@ -130,4 +139,4 @@ missing_required = [str(p.relative_to(ROOT)) for p in required if not p.exists()
 if missing_required:
     raise SystemExit(f"Deployment bundle is incomplete: {missing_required}")
 
-print("Urban Blood Rave deployment bundle extracted successfully (v2.26.1 iPhone hotfix applied).")
+print("Urban Blood Rave deployment bundle extracted successfully (v2.27 cinematic reveal applied).")
