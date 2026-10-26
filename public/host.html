@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blood Rave Host</title>
+  <link rel="stylesheet" href="/common.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">Host Control</div>
+  <div id="top" class="card">Loading...</div>
+  <div id="test" class="card"></div>
+  <div id="players" class="card"></div>
+  <div id="manual" class="card"></div>
+  <div id="links" class="card"></div>
+</div>
+<script>
+const key=new URLSearchParams(location.search).get('key')||'';
+let s;
+const proto=location.protocol==='https:'?'wss':'ws';
+let socket;
+let renderPending=false;
+
+function userSelectingText(){
+  const sel=window.getSelection?.();
+  return !!sel && !sel.isCollapsed && String(sel).length>0;
+}
+function requestRender(){
+  if(userSelectingText()){renderPending=true;return;}
+  renderPending=false;
+  render();
+}
+document.addEventListener('selectionchange',()=>{
+  if(renderPending && !userSelectingText()) requestAnimationFrame(requestRender);
+});
+
+function connectWs(){
+  try{
+    socket=new WebSocket(`${proto}://${location.host}/ws?kind=host&key=${encodeURIComponent(key)}`);
+    socket.onmessage=e=>{const m=JSON.parse(e.data);if(m.type==='host-state'){s=m.data;requestRender()}};
+    socket.onclose=()=>setTimeout(connectWs,1200);
+  }catch(_){setTimeout(connectWs,1200)}
+}
+connectWs();
+// Explicit inbound WebSocket traffic keeps the hosted game awake during quiet periods.
+setInterval(()=>{
+  try{if(socket && socket.readyState===WebSocket.OPEN) socket.send('ping')}catch(_){}
+},25000);
+
+async function refresh(){
+  try{
+    const r=await fetch(`/api/host/state?key=${encodeURIComponent(key)}`,{cache:'no-store'});
+    if(r.ok){s=await r.json();requestRender()}
+  }catch(_){}
+}
+setInterval(refresh,1000);
+
+async function post(path){
+  const r=await fetch(path+(path.includes('?')?'&':'?')+'key='+encodeURIComponent(key),{method:'POST'});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) alert(j.detail||j.error||'Action failed');
+  await refresh();
+}
+
+async function postJson(path,body){
+  const r=await fetch(path+(path.includes('?')?'&':'?')+'key='+encodeURIComponent(key),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) alert(j.detail||j.error||'Action failed');
+  await refresh();
+}
+
+async function configureTest(){
+  const enabled=document.getElementById('testEnabled').checked;
+  const speed=Math.max(1,Math.min(60,Number(document.getElementById('testSpeed').value)||1));
+  await postJson('/api/host/test-config',{enabled,speed});
+}
+function durationText(sec){
+  sec=Math.max(0,Math.round(sec));
+  const m=Math.floor(sec/60), r=sec%60;
+  return m?`${m}:${String(r).padStart(2,'0')}`:`${r}s`;
+}
+
+function render(){
+  if(!s)return;
+  const bw=s.biteWindow?` · Bite Window ${s.biteWindow.number} open`:' · No Bite Window';
+  const testTag=s.testMode?` · TEST ×${s.timeScale}`:'';
+  document.getElementById('top').innerHTML=`
+    <h1>URBAN BLOOD RAVE</h1>
+    <p>${s.status}${testTag} · SUNRISE IN ${Math.floor(s.remainingSec/60)}:${String(s.remainingSec%60).padStart(2,'0')}${bw}</p>
+    <div class="status-row">
+      <span class="pill">🧛 ${s.counts.vampires}</span>
+      <span class="pill">🩸 ${s.counts.humans}</span>
+      <span class="pill">💀 ${s.counts.dead}</span>
+    </div>
+    <p>
+      <button class="btn primary" ${s.status!=='lobby'?'disabled':''} onclick="post('/api/host/start')">START</button>
+      <button class="btn" onclick="post('/api/host/reset')">RESET</button>
+      <button class="btn" ${!s.votesOpen?'disabled':''} onclick="post('/api/host/resolve-vote')">RESOLVE VOTE</button>
+    </p>`;
+
+  const speed=Number(s.timeScale||1);
+  const controlsDisabled=s.status!=='lobby'?'disabled':'';
+  const testPanel=document.getElementById('test');
+  const testFocused=document.activeElement && testPanel.contains(document.activeElement);
+  if(!testFocused){
+    testPanel.innerHTML=`
+      <h2>Test Mode</h2>
+      <div class="notice">Accelerates the entire game clock and all timed actions. Reset first to change speed after START.</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <label><input id="testEnabled" type="checkbox" ${s.testMode?'checked':''} ${controlsDisabled}> Enable Test Mode</label>
+        <label>Speed <input id="testSpeed" type="number" min="1" max="60" step="1" value="${speed}" ${controlsDisabled} style="width:80px"> ×</label>
+        <button class="btn primary" ${controlsDisabled} onclick="configureTest()">APPLY</button>
+      </div>
+      <div class="small" style="margin-top:10px">At ×${speed}: full game ≈ ${durationText(s.gameDurationSec/speed)} real time · discussion ${durationText(90/speed)} · vote ${durationText(90/speed)} · bite window ${durationText(90/speed)} · clue ${durationText(20/speed)}.</div>`;
+  }
+
+  document.getElementById('players').innerHTML=`<h2>Players</h2><div class="list">${s.players.map(p=>`
+    <div><b>${p.name}</b> — ${p.currentRole}
+    ${p.protected?' · protected':''}${p.scarred?' · SCAR':''}${!p.alive?' · DEAD':''}
+    ${p.initialRole==='original_vampire'?` · bites ${p.bitesRemaining} · fails ${p.failedBites} · windows [${p.biteWindowsUsed.join(',')||'-'}]`:''}
+    ${p.vote?` · voted→${p.vote}`:''}</div>`).join('')}</div>`;
+
+  const manualDisabled=s.status!=='running'?'disabled':'';
+  document.getElementById('manual').innerHTML=`
+    <h2>Manual controls</h2>
+    <p>${s.clues.map((c,i)=>`<button class="btn" ${manualDisabled} onclick="post('/api/host/clue/${i}')">Clue ${i+1}</button>`).join(' ')}</p>
+    <p>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/bite-window/1')">Bite Window 1</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/bite-window/2')">Bite Window 2</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/bite-window/3')">Bite Window 3</button>
+    </p>
+    <p>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/discussion/1')">Discussion 1</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/vote/1')">Vote 1</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/discussion/2')">Discussion 2</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/vote/2')">Vote 2</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/discussion/3')">Discussion 3</button>
+      <button class="btn" ${manualDisabled} onclick="post('/api/host/vote/3')">Vote 3</button>
+    </p>`;
+
+  const localHost=['localhost','127.0.0.1'].includes(location.hostname);
+  const shareOrigin=(localHost&&s.lanIp)?`http://${s.lanIp}:${location.port||'3000'}`:location.origin;
+  document.getElementById('links').innerHTML=`<h2>Personal links</h2>${localHost&&s.lanIp?`<div class="notice">Shareable LAN address: <code>${shareOrigin}</code></div>`:''}<div class="list">${s.players.map(p=>`
+    <div><b>${p.name}</b><br><code>${shareOrigin}/p/${p.token}</code></div>`).join('')}</div>`;
+}
+</script>
+</body>
+</html>
