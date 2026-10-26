@@ -3,8 +3,8 @@ services:
     name: urban-blood-rave
     runtime: python
     plan: free
-    buildCommand: rm -rf deploy && mkdir deploy && python -c "import zipfile; zipfile.ZipFile('game_bundle.zip').extractall('deploy')" && pip install -r deploy/requirements.txt
-    startCommand: cd deploy && uvicorn app:app --host 0.0.0.0 --port $PORT
+    buildCommand: python bootstrap.py && pip install -r deployed/requirements.txt
+    startCommand: cd deployed && uvicorn app:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: HOST_KEY
