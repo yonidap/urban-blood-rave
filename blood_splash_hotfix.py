@@ -45,7 +45,10 @@ overlay=r'''<div id="bloodTransition" class="blood-transition" aria-hidden="true
   <svg class="blood-sheet-svg" viewBox="0 0 1000 1420" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="bloodMainGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#210006"/><stop offset="45%" stop-color="#5b0817"/><stop offset="80%" stop-color="#930f25"/><stop offset="100%" stop-color="#3a020d"/></linearGradient><filter id="bloodOrganic" x="-5%" y="-4%" width="110%" height="112%"><feTurbulence type="fractalNoise" baseFrequency="0.008 0.019" numOctaves="2" seed="42" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="14"/></filter></defs><path d="M0 0H1000V1190c-30 24-54-28-86 36-24 46-53-35-88 8-33 42-48 131-82 16-27-65-56 44-92-12-36-58-53 146-92 24-32-78-60 58-96-15-31-65-56 155-92 19-32-86-61 60-97-26-31-72-58 132-93 10-29-70-57 57-91-23-28-62-56 45-91-7Z" fill="url(#bloodMainGradient)" filter="url(#bloodOrganic)"/></svg>
   <div class="blood-grain"></div>
 </div>'''
-html,n=re.subn(r'<div id="bloodTransition" class="blood-transition" aria-hidden="true">.*?</div>\n(?=<script>)',overlay+'\n',html,count=1,flags=re.S)
+# Allow any whitespace between the overlay and the following <script>. The
+# generated v2.31 baseline has a blank line there, which the previous pattern
+# incorrectly rejected and caused Render builds to fail.
+html,n=re.subn(r'<div id="bloodTransition" class="blood-transition" aria-hidden="true">.*?</div>\s*(?=<script>)',overlay+'\n',html,count=1,flags=re.S)
 if n!=1: raise SystemExit('v2.36 splash pass: overlay not replaced')
 
 html=html.replace('// v2.31 cinematic blood-wash transition controller','// v2.36 splash-then-drip blood transition controller',1)
