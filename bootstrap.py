@@ -47,6 +47,13 @@ extract_b64_tar(BASE_PARTS, "base deployment bundle")
 # v2.26 Web Push / PWA upgrade.
 extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 
+# v2.28 phone-cue flow: decoys wait until a clue takeover is finished and
+# bite windows only show CHECK YOUR PHONES when someone can actually act.
+game_flow_hotfix = ROOT / "game_flow_hotfix.py"
+if not game_flow_hotfix.exists():
+    raise SystemExit("Missing game_flow_hotfix.py")
+runpy.run_path(str(game_flow_hotfix), run_name="__main__")
+
 # Current player-page fixes. This script is intentionally idempotent and is
 # invoked here so Render gets the changes even when the Blueprint build command
 # was not re-synced after render.yaml changed.
@@ -63,6 +70,13 @@ screen_bytes = gzip.decompress(
     base64.b64decode(screen_hotfix.read_text(encoding="utf-8").strip(), validate=True)
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
+
+# v2.28 public-display transitions: brief signal glitch on every actual scene
+# change (clue open/close, vote, reveal, scar, ending, etc.).
+screen_glitch_hotfix = ROOT / "screen_glitch_hotfix.py"
+if not screen_glitch_hotfix.exists():
+    raise SystemExit("Missing screen_glitch_hotfix.py")
+runpy.run_path(str(screen_glitch_hotfix), run_name="__main__")
 
 required = [
     TARGET / "app.py",
@@ -92,4 +106,14 @@ for marker in (
 if "translateZ(0)" in player_text:
     raise SystemExit("Player hotfix validation failed: iOS GPU rasterization transform still present")
 
-print("Urban Blood Rave deployment built successfully: v2.27 reveal + role privacy + iPhone header fix.")
+app_text = (TARGET / "app.py").read_text(encoding="utf-8")
+for marker in ("decoy-deferred", "pendingDecoyEvents", "bite_cue_recipients"):
+    if marker not in app_text:
+        raise SystemExit(f"Flow hotfix validation failed: missing {marker!r}")
+
+screen_text = (TARGET / "public" / "screen.html").read_text(encoding="utf-8")
+for marker in ("v2.28 signal-glitch transition controller", "transitionRender();", "ubrTextGlitch"):
+    if marker not in screen_text:
+        raise SystemExit(f"Screen glitch validation failed: missing {marker!r}")
+
+print("Urban Blood Rave deployment built successfully: v2.28 clue-safe cues + glitch transitions + current privacy/PWA fixes.")
