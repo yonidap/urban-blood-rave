@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.36"
+BUILD = "v2.37"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -57,6 +57,7 @@ extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 run_hotfix("game_flow_hotfix.py")
 run_hotfix("player_hotfix.py")
 run_hotfix("push_reliability_hotfix.py")
+run_hotfix("push_privacy_hotfix.py")
 
 # Main-screen reveal baseline.
 screen_hotfix = ROOT / "screen_v227.b64"
@@ -67,7 +68,7 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# Public-display transition baseline, then v2.36 splash-then-drip pass.
+# Public-display transition baseline, then splash-then-drip pass.
 run_hotfix("screen_glitch_hotfix.py")
 run_hotfix("blood_splash_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
