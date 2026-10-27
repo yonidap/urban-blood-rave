@@ -54,9 +54,7 @@ if not game_flow_hotfix.exists():
     raise SystemExit("Missing game_flow_hotfix.py")
 runpy.run_path(str(game_flow_hotfix), run_name="__main__")
 
-# Current player-page fixes. This script is intentionally idempotent and is
-# invoked here so Render gets the changes even when the Blueprint build command
-# was not re-synced after render.yaml changed.
+# Current player-page fixes.
 player_hotfix = ROOT / "player_hotfix.py"
 if not player_hotfix.exists():
     raise SystemExit("Missing player_hotfix.py")
@@ -71,8 +69,8 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# v2.29 public-display transitions: deliberately visible signal glitch on
-# every actual scene change (clue open/close, vote, reveal, scar, ending, etc.).
+# v2.30 public-display transitions: unmistakable full-viewport signal glitch
+# on every actual scene change (clue open/close, vote, reveal, scar, ending, etc.).
 screen_glitch_hotfix = ROOT / "screen_glitch_hotfix.py"
 if not screen_glitch_hotfix.exists():
     raise SystemExit("Missing screen_glitch_hotfix.py")
@@ -112,8 +110,13 @@ for marker in ("decoy-deferred", "pendingDecoyEvents", "bite_cue_recipients"):
         raise SystemExit(f"Flow hotfix validation failed: missing {marker!r}")
 
 screen_text = (TARGET / "public" / "screen.html").read_text(encoding="utf-8")
-for marker in ("v2.29 strong signal-glitch transition controller", "transitionRender();", "ubrTextGlitch"):
+for marker in (
+    "v2.30 unmistakable viewport glitch controller",
+    "ubr-glitching",
+    "ubrViewportIn",
+    "transitionRender();",
+):
     if marker not in screen_text:
         raise SystemExit(f"Screen glitch validation failed: missing {marker!r}")
 
-print("Urban Blood Rave deployment built successfully: clue-safe cues + v2.29 strong glitch transitions + current privacy/PWA fixes.")
+print("Urban Blood Rave deployment built successfully: clue-safe cues + v2.30 viewport glitch + current privacy/PWA fixes.")
