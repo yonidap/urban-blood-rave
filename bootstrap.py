@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.35"
+BUILD = "v2.36"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -67,9 +67,9 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# Public-display transition baseline. v2.34 intentionally uses the cleaner
-# v2.31 blood wash rather than the discarded v2.33 realism pass.
+# Public-display transition baseline, then v2.36 splash-then-drip pass.
 run_hotfix("screen_glitch_hotfix.py")
+run_hotfix("blood_splash_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
 # Static build marker lets an already-open /screen detect a newer deploy.
