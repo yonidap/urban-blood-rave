@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.34"
+BUILD = "v2.35"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -56,6 +56,7 @@ extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 # Server/player fixes.
 run_hotfix("game_flow_hotfix.py")
 run_hotfix("player_hotfix.py")
+run_hotfix("push_reliability_hotfix.py")
 
 # Main-screen reveal baseline.
 screen_hotfix = ROOT / "screen_v227.b64"
@@ -66,9 +67,8 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# Public-display transition baseline: keep the cleaner v2.31 blood wash.
-# The v2.33 realism pass is intentionally NOT applied; it looked mottled rather
-# than liquid. Corrected glitch remains as fallback/micro FX in this hotfix.
+# Public-display transition baseline. v2.34 intentionally uses the cleaner
+# v2.31 blood wash rather than the discarded v2.33 realism pass.
 run_hotfix("screen_glitch_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
