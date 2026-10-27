@@ -8,6 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
+BUILD = "v2.32"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -37,30 +38,27 @@ def extract_b64_tar(parts, label: str):
         tf.extractall(TARGET)
 
 
+def run_hotfix(filename: str):
+    path = ROOT / filename
+    if not path.exists():
+        raise SystemExit(f"Missing {filename}")
+    runpy.run_path(str(path), run_name="__main__")
+
+
 if TARGET.exists():
     shutil.rmtree(TARGET)
 TARGET.mkdir(parents=True)
 
-# v2.25 base application.
+# Base application + Web Push/PWA overlay.
 extract_b64_tar(BASE_PARTS, "base deployment bundle")
-
-# v2.26 Web Push / PWA upgrade.
 extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 
-# Phone-cue flow: decoys wait until a clue takeover is finished and bite
-# windows only show CHECK YOUR PHONES when someone can actually act.
-game_flow_hotfix = ROOT / "game_flow_hotfix.py"
-if not game_flow_hotfix.exists():
-    raise SystemExit("Missing game_flow_hotfix.py")
-runpy.run_path(str(game_flow_hotfix), run_name="__main__")
+# Server/player fixes. Each hotfix validates the exact fragments it changes and
+# fails the build itself if it cannot apply safely.
+run_hotfix("game_flow_hotfix.py")
+run_hotfix("player_hotfix.py")
 
-# Current player-page fixes.
-player_hotfix = ROOT / "player_hotfix.py"
-if not player_hotfix.exists():
-    raise SystemExit("Missing player_hotfix.py")
-runpy.run_path(str(player_hotfix), run_name="__main__")
-
-# v2.27 main-screen vote reveal: cinematic burn/dissolve, no flame video.
+# Main-screen reveal baseline.
 screen_hotfix = ROOT / "screen_v227.b64"
 if not screen_hotfix.exists():
     raise SystemExit("Missing v2.27 screen reveal hotfix")
@@ -69,12 +67,13 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# v2.31 public-display transitions: a dark liquid blood wash covers the
-# display for major scene changes; corrected glitch remains as fallback/micro FX.
-screen_glitch_hotfix = ROOT / "screen_glitch_hotfix.py"
-if not screen_glitch_hotfix.exists():
-    raise SystemExit("Missing screen_glitch_hotfix.py")
-runpy.run_path(str(screen_glitch_hotfix), run_name="__main__")
+# Current public-display transition + runtime freshness controller.
+run_hotfix("screen_glitch_hotfix.py")
+run_hotfix("screen_runtime_hotfix.py")
+
+# A tiny static build marker lets an already-open /screen detect a newer deploy
+# and reload itself instead of continuing to run stale JavaScript indefinitely.
+(TARGET / "public" / "build.txt").write_text(BUILD + "\n", encoding="utf-8")
 
 required = [
     TARGET / "app.py",
@@ -82,45 +81,12 @@ required = [
     TARGET / "public" / "screen.html",
     TARGET / "public" / "player.html",
     TARGET / "public" / "host.html",
-    TARGET / "public" / "fire_overlay.webm",
     TARGET / "public" / "sw.js",
     TARGET / "public" / "manifest.webmanifest",
-    TARGET / "public" / "icon-180.png",
-    TARGET / "public" / "icon-512.png",
+    TARGET / "public" / "build.txt",
 ]
 missing_required = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
 if missing_required:
     raise SystemExit(f"Deployment bundle is incomplete: {missing_required}")
 
-player_text = (TARGET / "public" / "player.html").read_text(encoding="utf-8")
-for marker in (
-    "function lobbyScene(){",
-    "IDENTITY HIDDEN",
-    "Visible for 5 seconds",
-    "ACTION ALERTS ON",
-):
-    if marker not in player_text:
-        raise SystemExit(f"Player hotfix validation failed: missing {marker!r}")
-if "translateZ(0)" in player_text:
-    raise SystemExit("Player hotfix validation failed: iOS GPU rasterization transform still present")
-
-app_text = (TARGET / "app.py").read_text(encoding="utf-8")
-for marker in ("decoy-deferred", "pendingDecoyEvents", "bite_cue_recipients"):
-    if marker not in app_text:
-        raise SystemExit(f"Flow hotfix validation failed: missing {marker!r}")
-
-screen_text = (TARGET / "public" / "screen.html").read_text(encoding="utf-8")
-for marker in (
-    "v2.31 cinematic blood-wash transition controller",
-    'id="bloodTransition"',
-    "bloodOrganic",
-    "bloodWashRender()",
-    "#screen.glitch-out",
-    "transitionRender();",
-):
-    if marker not in screen_text:
-        raise SystemExit(f"Screen transition validation failed: missing {marker!r}")
-if "#root.glitch-out" in screen_text:
-    raise SystemExit("Screen transition validation failed: obsolete #root glitch selector remains")
-
-print("Urban Blood Rave deployment built successfully: clue-safe cues + v2.31 blood wash + corrected glitch fallback + current privacy/PWA fixes.")
+print(f"Urban Blood Rave deployment built successfully ({BUILD}).")
