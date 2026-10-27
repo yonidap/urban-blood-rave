@@ -69,8 +69,8 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# v2.30 public-display transitions: unmistakable full-viewport signal glitch
-# on every actual scene change (clue open/close, vote, reveal, scar, ending, etc.).
+# v2.31 public-display transitions: a dark liquid blood wash covers the
+# display for major scene changes; corrected glitch remains as fallback/micro FX.
 screen_glitch_hotfix = ROOT / "screen_glitch_hotfix.py"
 if not screen_glitch_hotfix.exists():
     raise SystemExit("Missing screen_glitch_hotfix.py")
@@ -111,12 +111,16 @@ for marker in ("decoy-deferred", "pendingDecoyEvents", "bite_cue_recipients"):
 
 screen_text = (TARGET / "public" / "screen.html").read_text(encoding="utf-8")
 for marker in (
-    "v2.30 unmistakable viewport glitch controller",
-    "ubr-glitching",
-    "ubrViewportIn",
+    "v2.31 cinematic blood-wash transition controller",
+    'id="bloodTransition"',
+    "bloodOrganic",
+    "bloodWashRender()",
+    "#screen.glitch-out",
     "transitionRender();",
 ):
     if marker not in screen_text:
-        raise SystemExit(f"Screen glitch validation failed: missing {marker!r}")
+        raise SystemExit(f"Screen transition validation failed: missing {marker!r}")
+if "#root.glitch-out" in screen_text:
+    raise SystemExit("Screen transition validation failed: obsolete #root glitch selector remains")
 
-print("Urban Blood Rave deployment built successfully: clue-safe cues + v2.30 viewport glitch + current privacy/PWA fixes.")
+print("Urban Blood Rave deployment built successfully: clue-safe cues + v2.31 blood wash + corrected glitch fallback + current privacy/PWA fixes.")
