@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.33"
+BUILD = "v2.34"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -66,9 +66,10 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# Public-display transition baseline, then the v2.33 realism pass.
+# Public-display transition baseline: keep the cleaner v2.31 blood wash.
+# The v2.33 realism pass is intentionally NOT applied; it looked mottled rather
+# than liquid. Corrected glitch remains as fallback/micro FX in this hotfix.
 run_hotfix("screen_glitch_hotfix.py")
-run_hotfix("blood_realism_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
 # Static build marker lets an already-open /screen detect a newer deploy.
