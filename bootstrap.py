@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.32"
+BUILD = "v2.33"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -53,8 +53,7 @@ TARGET.mkdir(parents=True)
 extract_b64_tar(BASE_PARTS, "base deployment bundle")
 extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 
-# Server/player fixes. Each hotfix validates the exact fragments it changes and
-# fails the build itself if it cannot apply safely.
+# Server/player fixes.
 run_hotfix("game_flow_hotfix.py")
 run_hotfix("player_hotfix.py")
 
@@ -67,12 +66,12 @@ screen_bytes = gzip.decompress(
 )
 (TARGET / "public" / "screen.html").write_bytes(screen_bytes)
 
-# Current public-display transition + runtime freshness controller.
+# Public-display transition baseline, then the v2.33 realism pass.
 run_hotfix("screen_glitch_hotfix.py")
+run_hotfix("blood_realism_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
-# A tiny static build marker lets an already-open /screen detect a newer deploy
-# and reload itself instead of continuing to run stale JavaScript indefinitely.
+# Static build marker lets an already-open /screen detect a newer deploy.
 (TARGET / "public" / "build.txt").write_text(BUILD + "\n", encoding="utf-8")
 
 required = [
