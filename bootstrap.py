@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.41"
+BUILD = "v2.42"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -83,6 +83,7 @@ screen_bytes = gzip.decompress(
 run_hotfix("screen_glitch_hotfix.py")
 run_hotfix("blood_splash_hotfix.py")
 run_hotfix("tv_display_hotfix.py")
+run_hotfix("tv_display_v242_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
 # Static build marker lets an already-open /screen detect a newer deploy.
