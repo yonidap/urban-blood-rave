@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.37"
+BUILD = "v2.38"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -53,6 +53,16 @@ TARGET.mkdir(parents=True)
 extract_b64_tar(BASE_PARTS, "base deployment bundle")
 extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 
+# Copy the four protected-player scar animations from the repository into the
+# generated deployment tree. Render serves deployed/public via /static.
+scar_source = ROOT / "public" / "scars"
+scar_target = TARGET / "public" / "scars"
+expected_scars = ["gal.mp4", "yakir.mp4", "tal.mp4", "ori.mp4"]
+missing_scars = [name for name in expected_scars if not (scar_source / name).exists()]
+if missing_scars:
+    raise SystemExit(f"Missing scar animations: {missing_scars}")
+shutil.copytree(scar_source, scar_target, dirs_exist_ok=True)
+
 # Server/player fixes.
 run_hotfix("game_flow_hotfix.py")
 run_hotfix("player_hotfix.py")
@@ -85,7 +95,7 @@ required = [
     TARGET / "public" / "sw.js",
     TARGET / "public" / "manifest.webmanifest",
     TARGET / "public" / "build.txt",
-]
+] + [scar_target / name for name in expected_scars]
 missing_required = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
 if missing_required:
     raise SystemExit(f"Deployment bundle is incomplete: {missing_required}")
