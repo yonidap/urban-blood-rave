@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.43"
+BUILD = "v2.44"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -85,6 +85,7 @@ run_hotfix("blood_splash_hotfix.py")
 run_hotfix("tv_display_hotfix.py")
 run_hotfix("tv_display_v242_hotfix.py")
 run_hotfix("tv_layout_v243_hotfix.py")
+run_hotfix("tal_intro_v244_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
 # Static build marker lets an already-open /screen detect a newer deploy.
