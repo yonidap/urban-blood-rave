@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.45"
+BUILD = "v2.46"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -69,6 +69,7 @@ run_hotfix("game_flow_hotfix.py")
 run_hotfix("player_hotfix.py")
 run_hotfix("push_reliability_hotfix.py")
 run_hotfix("push_privacy_hotfix.py")
+run_hotfix("audit_backend_v246_hotfix.py")
 
 # Main-screen reveal baseline.
 screen_hotfix = ROOT / "screen_v227.b64"
@@ -87,6 +88,7 @@ run_hotfix("tv_display_v242_hotfix.py")
 run_hotfix("tv_layout_v243_hotfix.py")
 run_hotfix("tal_intro_v244_hotfix.py")
 run_hotfix("scar_card_v245_hotfix.py")
+run_hotfix("audit_frontend_v246_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
 # Static build marker lets an already-open /screen detect a newer deploy.
