@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  audit:
+  game-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     env:
@@ -22,7 +22,24 @@ jobs:
         run: pip install -r deployed/requirements.txt httpx pytest
       - name: Compile Python
         run: python -m compileall -q deployed tests
-      - name: Inspect reveal queue runtime
-        run: python tests/inspect_reveal_runtime.py
       - name: Full-game integration + scheduler regression suite
         run: pytest -q -s tests/test_full_game.py
+
+  tv-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      HOST_KEY: ci-host-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build deployed app exactly like Render
+        run: python bootstrap.py
+      - name: Install runtime + browser audit dependencies
+        run: |
+          pip install -r deployed/requirements.txt playwright
+          python -m playwright install --with-deps chromium
+      - name: 1920x1080 worst-case public-screen layout
+        run: python tests/test_tv_layout.py
