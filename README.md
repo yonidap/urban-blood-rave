@@ -1,4 +1,4 @@
-# Urban Blood Rave — v2.46 audited build
+# Urban Blood Rave — v2.47 audited build
 
 Browser-based Halloween party game for 13 players, one public TV screen and a host console.
 
@@ -72,7 +72,7 @@ Protected-player bite animations:
 - `public/scars/tal.mp4`
 - `public/scars/ori.mp4`
 
-The public screen chroma-keys the animation background at runtime. Yakir uses a dedicated black-key path; the others use green-key processing. Tal's reveal starts about 1.05 seconds into the source clip. The finished Scarred players remain in the TV gallery after the reveal.
+The public screen chroma-keys the animation background at runtime. Yakir uses a dedicated black-key path; the others use green-key processing. Tal's reveal starts about 1.38 seconds into the source clip. The finished Scarred players remain in the TV gallery after the reveal.
 
 ## Notifications / PWA
 
