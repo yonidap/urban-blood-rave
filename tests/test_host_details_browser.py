@@ -46,6 +46,19 @@ def main():
             page.on("pageerror", lambda exc: errors.append(str(exc)))
             page.goto(f"{BASE}/host?key={KEY}", wait_until="domcontentloaded", timeout=15000)
 
+            roster = page.evaluate(
+                """async ({key}) => {
+                    const r = await fetch('/api/host/state?key=' + encodeURIComponent(key));
+                    if (!r.ok) throw new Error('host state ' + r.status);
+                    const s = await r.json();
+                    return s.players.map(p => ({id:p.id, name:p.name, protected:p.protected}));
+                }""",
+                {"key": KEY},
+            )
+            assert len(roster) == 12, roster
+            assert all(row["id"] != "yakir" and row["name"] != "Yakir" for row in roster), roster
+            assert {row["id"] for row in roster if row["protected"]} == {"gal", "tal", "uri"}, roster
+
             game_summary = page.locator("summary", has_text="GAME STATE · SPOILERS")
             manual_summary = page.locator("summary", has_text="ADVANCED MANUAL OVERRIDES")
             game_summary.wait_for(timeout=10000)
@@ -75,7 +88,7 @@ def main():
             assert manual_open is True, "Advanced Manual Overrides collapsed after periodic refresh"
             assert not errors, f"Browser page errors: {errors}"
 
-            print("Host details persistence PASS: gameState=open, manual=open after live + periodic renders")
+            print("Host audit PASS: 12 players, Yakir absent, 3 protected, details persist")
             browser.close()
     finally:
         server.should_exit = True
