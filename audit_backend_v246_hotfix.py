@@ -76,7 +76,7 @@ scheduler = r'''async def scheduler_loop():
                         break
                     handled = True
                     if typ == 'clue':
-                        await show_clue(val)
+                        handled = await show_clue(val)
                     elif typ == 'bite_window':
                         handled = await open_bite_window(val)
                     elif typ == 'discussion':
@@ -114,6 +114,29 @@ scheduler = r'''async def scheduler_loop():
         await asyncio.sleep(0.25 if state.get('testMode') and time_scale() > 1 else 1.0)'''
 
 text = replace_function(text, "scheduler_loop", scheduler)
+
+show_clue = r'''async def show_clue(index):
+    # v2.46 audit hardening: a clue is only consumed after it is actually
+    # activated/published. If another reveal or clue is on screen, queue it and
+    # let the scheduler retry until the queued clue has genuinely appeared.
+    if index in state['publishedClues']:
+        mark_scheduled_event_fired('clue', index)
+        return True
+    if state.get('reveal') or state.get('activeClueIndex') is not None:
+        already_queued = any(
+            x.get('kind') == 'clue' and x.get('index') == index
+            for x in state['revealQueue']
+        )
+        if not already_queued:
+            state['revealQueue'].append(dict(kind='clue', index=index))
+        await broadcast_all()
+        return False
+    _activate_clue(index)
+    mark_scheduled_event_fired('clue', index)
+    await broadcast_all()
+    return True'''
+
+text = replace_function(text, "show_clue", show_clue)
 
 # Do not allow a vote to leapfrog an active discussion, especially when a
 # scheduled event was delayed by a temporary manual phase conflict.
@@ -181,4 +204,4 @@ async def host_readiness(key: str):
 '''
 
 app_path.write_text(text, encoding="utf-8")
-print("Applied v2.46 backend audit hardening: scheduler retry/watchdog, final votes, readiness, TTL.")
+print("Applied v2.46 backend audit hardening: scheduler/clue retry, watchdog, final votes, readiness, TTL.")
