@@ -220,14 +220,14 @@ def test_full_game_all_players_participate_end_to_end():
         assert expected_fired.issubset(set(game.state["fired"]))
 
 
-def test_v246_safety_surfaces_are_in_built_artifacts():
+def test_v247_safety_surfaces_are_in_built_artifacts():
     player = (DEPLOYED / "public" / "player.html").read_text(encoding="utf-8")
     host = (DEPLOYED / "public" / "host.html").read_text(encoding="utf-8")
     screen = (DEPLOYED / "public" / "screen.html").read_text(encoding="utf-8")
     app_source = (DEPLOYED / "app.py").read_text(encoding="utf-8")
     build = (DEPLOYED / "public" / "build.txt").read_text(encoding="utf-8").strip()
 
-    assert build == "v2.46"
+    assert build == "v2.47"
     assert "v2.46 audit hardening" in app_source
     assert "ttl=90" in app_source
     assert "vote already cast" in app_source
@@ -238,3 +238,4 @@ def test_v246_safety_surfaces_are_in_built_artifacts():
     assert "FINAL CONFIRMATION: reset now?" in host
     assert "Preflight" in host
     assert "v2.46 screen connectivity watchdog" in screen
+    assert "Math.min(1.38" in screen
