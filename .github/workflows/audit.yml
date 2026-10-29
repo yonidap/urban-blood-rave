@@ -43,3 +43,5 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: 1920x1080 worst-case public-screen layout
         run: python tests/test_tv_layout.py
+      - name: Host collapsible sections survive live renders
+        run: python tests/test_host_details_browser.py
