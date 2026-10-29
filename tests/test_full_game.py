@@ -60,25 +60,18 @@ def test_scheduler_retries_blocked_event_and_preserves_discussion_duration():
         configure_speed(client, 60)
         post_host(client, "/api/host/start")
 
-        # Jump the game clock to just before Discussion 1, while marking all
-        # earlier scheduled events as already handled. This keeps the test fast
-        # while exercising the real scheduler loop and API state.
         earlier = [f"{typ}:{at}:{val}" for at, typ, val in game.SCHEDULE if at < 810]
         game.state["fired"] = earlier
         game.state["startedAt"] = time.time() - (805 / game.time_scale())
 
-        # Create the exact conflict that used to eat Discussion 1.
         post_host(client, "/api/host/bite-window/2")
         discussion_key = "discussion:810:1"
         vote_key = "vote:900:1"
 
-        # Discussion becomes due while the bite window is active. It must NOT
-        # be marked fired merely because the first attempt was blocked.
         wait_until(lambda: game.state.get("elapsedSec", 0) >= 812, timeout=2, message="discussion due")
         assert discussion_key not in game.state["fired"]
         assert game.state.get("activeBiteWindow") is not None
 
-        # After the bite window closes, the same scheduled discussion retries.
         wait_until(
             lambda: game.state.get("phase") == "discussion" and discussion_key in game.state["fired"],
             timeout=4,
@@ -87,8 +80,6 @@ def test_scheduler_retries_blocked_event_and_preserves_discussion_duration():
         discussion_until = game.state["discussionEndsAt"]
         assert discussion_until and discussion_until > game.now_ms()
 
-        # Vote 1 is already overdue on the absolute clock, but it must not open
-        # until the delayed discussion has actually completed its 90 game-sec.
         wait_until(lambda: game.state.get("elapsedSec", 0) >= 902, timeout=3, message="vote absolute due")
         assert not game.state["votesOpen"]
         assert vote_key not in game.state["fired"]
@@ -120,8 +111,6 @@ def test_full_game_all_players_participate_end_to_end():
         players = {p["id"]: p for p in hs["players"]}
         assert len(players) == 13
 
-        # Simulate all player apps being open before START and exercise the new
-        # readiness/presence path.
         for p in players.values():
             r = client.post(f"/api/player/{p['token']}/presence")
             assert r.status_code == 200, r.text
@@ -149,7 +138,6 @@ def test_full_game_all_players_participate_end_to_end():
             if hs["status"] == "finished":
                 break
 
-            # Keep all living player apps online throughout the simulation.
             if time.time() - last_presence > 10:
                 for p in hs["players"]:
                     if p.get("alive", True):
@@ -205,13 +193,11 @@ def test_full_game_all_players_participate_end_to_end():
         assert final["status"] == "finished"
         assert final["winner"]["side"] == "humans"
 
-        # These are intentionally internal lifecycle fields, not host API
-        # presentation fields, so assert them directly against the running game.
         assert sorted(game.state["completedVoteRounds"]) == [1, 2, 3]
         assert sorted(game.state["publishedClues"]) == [0, 1, 2, 3, 4, 5]
 
         internal = {p["id"]: p for p in game.state["players"]}
-        assert {p["id"] for p in game.state["scarLoop"]} == {"gal", "yakir", "tal", "uri"}
+        assert {p["playerId"] for p in game.state["scarLoop"]} == {"gal", "yakir", "tal", "uri"}
         assert all(internal[p]["scarred"] for p in ("gal", "yakir", "tal", "uri"))
         assert internal["dan"]["currentRole"] == "converted"
         assert internal["maor"]["currentRole"] == "converted"
@@ -221,18 +207,14 @@ def test_full_game_all_players_participate_end_to_end():
         assert internal["lutz"]["alive"] is False
         assert internal["kiso"]["alive"] is False
 
-        # All planned bites were submitted, and every living player at each vote
-        # participated through their personal player endpoint.
         assert bites_sent == {
             (1, "shalev"), (1, "alan"), (1, "yonatan"),
             (2, "shalev"), (2, "alan"), (2, "yonatan"),
         }
-        assert len(vote_participation[1]) == 13  # No deaths before Vote 1.
-        assert len(vote_participation[2]) == 11  # Rafael + Shalev are dead by Vote 2.
-        assert len(vote_participation[3]) == 10  # Lutz eliminated in Vote 2.
+        assert len(vote_participation[1]) == 13
+        assert len(vote_participation[2]) == 11
+        assert len(vote_participation[3]) == 10
 
-        # Scheduler watchdog stayed healthy and every scheduled event was
-        # consumed once in the completed match.
         assert game.scheduler_health["errors"] == 0, game.scheduler_health
         expected_fired = {f"{typ}:{at}:{val}" for at, typ, val in game.SCHEDULE}
         assert expected_fired.issubset(set(game.state["fired"]))
