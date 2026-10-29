@@ -109,7 +109,7 @@ def main():
                 }
             """)
 
-            assert result["build"] == "v2.46", result
+            assert result["build"] == "v2.47", result
             assert result["clueCount"] == 6, result
             assert result["scarCount"] == 4, result
             assert result["scrollWidth"] <= 1922, result
