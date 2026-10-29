@@ -104,12 +104,14 @@ The public screen chroma-keys the animation background at runtime. Yakir uses a 
 
 Test Mode is available in the lobby at 1x–60x. Speed is locked after START; RESET returns to the lobby.
 
-GitHub Actions rebuilds `deployed/` exactly through `bootstrap.py`, compiles the Python application and runs `tests/test_full_game.py` on every push to `main`.
+GitHub Actions rebuilds `deployed/` exactly through `bootstrap.py`, compiles the Python application, runs `tests/test_full_game.py`, and performs a real Chromium layout smoke test for the TV screen on every push to `main`.
 
-The integration suite includes:
-- a scheduler regression test that deliberately overlaps a manual Bite Window with a scheduled Discussion and verifies the Discussion is retried and the Vote still waits for its full discussion;
-- a full 60x match in which all 13 player clients report presence, Original Vampires submit bites through their personal endpoints, all living players vote in all three rounds, all six clues and all three Bite Windows run, four protected players are Scarred, humans are Converted, an Original Vampire dies after two failed bites, and the match reaches a verified final winner;
-- static assertions that the v2.46 safety/readiness/privacy changes are present in the generated production artifacts.
+The automated audit includes:
+- a 60x scheduler regression test that deliberately overlaps a manual Bite Window with a scheduled Discussion and verifies the Discussion is retried and the Vote still waits for its full discussion;
+- a full 15x match in which all 13 player clients report presence, Original Vampires submit bites through their personal endpoints, all living players vote in all three rounds, all six clues and all three Bite Windows run, four protected players are Scarred, humans are Converted, an Original Vampire dies after two failed bites, and the match reaches a verified final winner;
+- the full-match audit intentionally uses 15x rather than 60x because each protected-player Scar reveal has a 12-second real-time minimum; four Scar videos alone cannot physically complete inside a 46.5-second 60x match;
+- static assertions that the v2.46 safety/readiness/privacy changes are present in the generated production artifacts;
+- a 1920×1080 Chromium worst-case TV test with all six clues and all four Scarred cards visible at once, checking for clipped/overflowing production elements.
 
 ## Intentional operational limitation
 
