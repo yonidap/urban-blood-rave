@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.47"
+BUILD = "v2.48"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
@@ -53,15 +53,21 @@ TARGET.mkdir(parents=True)
 extract_b64_tar(BASE_PARTS, "base deployment bundle")
 extract_b64_tar(OVERLAY_PARTS, "v2.26 overlay")
 
-# Copy the four protected-player scar animations from the repository into the
-# generated deployment tree. The app serves deployed/public/scars at /scars.
+# Party-night roster: Yakir is no longer attending. Apply this before every
+# backend/gameplay hotfix so all later code sees the final 12-player seed.
+run_hotfix("roster_v248_remove_yakir.py")
+
+# Copy the three active protected-player scar animations into the generated
+# deployment tree. Yakir's old source asset may remain in the repository, but
+# it is deliberately removed from the deploy output so there is no stale media.
 scar_source = ROOT / "public" / "scars"
 scar_target = TARGET / "public" / "scars"
-expected_scars = ["gal.mp4", "yakir.mp4", "tal.mp4", "ori.mp4"]
+expected_scars = ["gal.mp4", "tal.mp4", "ori.mp4"]
 missing_scars = [name for name in expected_scars if not (scar_source / name).exists()]
 if missing_scars:
     raise SystemExit(f"Missing scar animations: {missing_scars}")
 shutil.copytree(scar_source, scar_target, dirs_exist_ok=True)
+(scar_target / "yakir.mp4").unlink(missing_ok=True)
 
 # Server/player/media fixes.
 run_hotfix("scar_media_hotfix.py")
@@ -108,5 +114,7 @@ required = [
 missing_required = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
 if missing_required:
     raise SystemExit(f"Deployment bundle is incomplete: {missing_required}")
+if (scar_target / "yakir.mp4").exists():
+    raise SystemExit("v2.48 deployment unexpectedly contains Yakir scar media")
 
 print(f"Urban Blood Rave deployment built successfully ({BUILD}).")
