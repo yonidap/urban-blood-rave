@@ -19,7 +19,7 @@ BASE = f"http://127.0.0.1:{PORT}"
 
 
 def prepare_worst_case_tv_state():
-    # Static worst-case main screen: all six clues and all four protected
+    # Static worst-case main screen: all six clues and all three active protected
     # portraits visible at once. Do not start the scheduler; this test is about
     # production DOM/CSS geometry, not game time.
     game.state["status"] = "running"
@@ -35,6 +35,7 @@ def prepare_worst_case_tv_state():
     game.state["publishedClues"] = list(range(6))
 
     protected = [p for p in game.state["players"] if p.get("protected")]
+    assert {p["id"] for p in protected} == {"gal", "tal", "uri"}
     for p in protected:
         p["scarred"] = True
     game.state["scarLoop"] = [
@@ -71,7 +72,7 @@ def main():
             page.on("pageerror", lambda exc: errors.append(str(exc)))
             page.goto(f"{BASE}/screen?debug=1", wait_until="domcontentloaded", timeout=15000)
             page.wait_for_function("document.querySelectorAll('.clue-row').length === 6", timeout=10000)
-            page.wait_for_function("document.querySelectorAll('.scar-person').length === 4", timeout=10000)
+            page.wait_for_function("document.querySelectorAll('.scar-person').length === 3", timeout=10000)
             page.wait_for_timeout(1200)
 
             result = page.evaluate("""
@@ -109,9 +110,9 @@ def main():
                 }
             """)
 
-            assert result["build"] == "v2.47", result
+            assert result["build"] == "v2.48", result
             assert result["clueCount"] == 6, result
-            assert result["scarCount"] == 4, result
+            assert result["scarCount"] == 3, result
             assert result["scrollWidth"] <= 1922, result
             assert result["bodyScrollWidth"] <= 1922, result
             assert not result["offenders"], result
