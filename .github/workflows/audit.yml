@@ -22,5 +22,7 @@ jobs:
         run: pip install -r deployed/requirements.txt httpx pytest
       - name: Compile Python
         run: python -m compileall -q deployed tests
+      - name: Inspect reveal queue runtime
+        run: python tests/inspect_reveal_runtime.py
       - name: Full-game integration + scheduler regression suite
         run: pytest -q -s tests/test_full_game.py
