@@ -8,6 +8,7 @@ on:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
     env:
       HOST_KEY: ci-host-key
     steps:
@@ -21,5 +22,5 @@ jobs:
         run: pip install -r deployed/requirements.txt httpx pytest
       - name: Compile Python
         run: python -m compileall -q deployed tests
-      - name: Inspect final runtime
-        run: python tests/inspect_runtime.py
+      - name: Full-game integration + scheduler regression suite
+        run: pytest -q -s tests/test_full_game.py
