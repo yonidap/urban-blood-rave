@@ -1,6 +1,6 @@
-# Urban Blood Rave — v2.47 audited build
+# Urban Blood Rave — v2.48 audited build
 
-Browser-based Halloween party game for 13 players, one public TV screen and a host console.
+Browser-based Halloween party game for 12 players, one public TV screen and a host console.
 
 ## Build and run
 
@@ -20,10 +20,14 @@ Open:
 
 Production is deployed as an HTTPS PWA. The public screen supports `?debug=1` to show the deployed build version.
 
+## Party-night roster
+
+- 12 active players. Yakir is not attending and is removed from the production roster entirely; his old personal link is invalid.
+- Original Vampires: Shalev, Ellen, Yonatan.
+- Protected Humans: Gal, Tal, Ori. Protection is hidden until they survive a bite.
+
 ## Roles and bite rules
 
-- Original Vampires: Shalev, Ellen, Yonatan.
-- Protected Humans: Gal, Yakir, Tal, Ori. Protection is hidden until they survive a bite.
 - Only Original Vampires can bite; Converted players cannot bite.
 - Each Original Vampire has 2 bite attempts total and at most 1 bite per Bite Window.
 - Bite Windows: 07:00, 22:00, 37:00; each lasts 90 seconds.
@@ -45,7 +49,7 @@ Production is deployed as an HTTPS PWA. The public screen supports `?debug=1` to
 - Sunrise/game deadline: 46:30.
 - Decoy private alerts are scattered through the timeline to camouflage real phone actions.
 
-If a scheduled Bite/Discussion/Vote is temporarily blocked by another phase, the scheduler now leaves it pending and retries instead of silently consuming it. A delayed vote cannot leapfrog a still-active 90-second discussion.
+If a scheduled Bite/Discussion/Vote is temporarily blocked by another phase, the scheduler leaves it pending and retries instead of silently consuming it. A delayed vote cannot leapfrog a still-active 90-second discussion.
 
 ## Voting
 
@@ -66,13 +70,12 @@ If a scheduled Bite/Discussion/Vote is temporarily blocked by another phase, the
 
 ## Scar media
 
-Protected-player bite animations:
+Active protected-player bite animations:
 - `public/scars/gal.mp4`
-- `public/scars/yakir.mp4`
 - `public/scars/tal.mp4`
 - `public/scars/ori.mp4`
 
-The public screen chroma-keys the animation background at runtime. Yakir uses a dedicated black-key path; the others use green-key processing. Tal's reveal starts about 1.38 seconds into the source clip. The finished Scarred players remain in the TV gallery after the reveal.
+The production build deliberately excludes Yakir's old scar media. The public screen chroma-keys the active animations at runtime. Tal's reveal starts about 1.38 seconds into the source clip. Finished Scarred players remain in the TV gallery after the reveal.
 
 ## Notifications / PWA
 
@@ -82,7 +85,7 @@ The public screen chroma-keys the animation background at runtime. Yakir uses a 
 - Push TTL is 90 seconds so an action notification should not arrive several minutes after its window has ended.
 - Push is used for Bite opportunities, voting and decoy alerts.
 - TEST ALERT is available only in the lobby.
-- The Host preflight panel shows each player's current ONLINE and PUSH readiness.
+- The Host preflight panel shows each active player's current ONLINE and PUSH readiness.
 
 ## Player privacy
 
@@ -93,7 +96,7 @@ The public screen chroma-keys the animation background at runtime. Yakir uses a 
 
 ## Host safety
 
-- START warns if one or more players are offline or do not have Push ready.
+- START warns if one or more active players are offline or do not have Push ready.
 - RESET requires two explicit confirmations.
 - RESOLVE VOTE warns if living players have not all voted.
 - Spoiler-heavy role state is collapsed by default.
@@ -104,14 +107,16 @@ The public screen chroma-keys the animation background at runtime. Yakir uses a 
 
 Test Mode is available in the lobby at 1x–60x. Speed is locked after START; RESET returns to the lobby.
 
-GitHub Actions rebuilds `deployed/` exactly through `bootstrap.py`, compiles the Python application, runs `tests/test_full_game.py`, and performs a real Chromium layout smoke test for the TV screen on every push to `main`.
+GitHub Actions rebuilds `deployed/` exactly through `bootstrap.py`, compiles the Python application, runs `tests/test_full_game.py`, and performs real Chromium browser audits on every push to `main`.
 
 The automated audit includes:
 - a 60x scheduler regression test that deliberately overlaps a manual Bite Window with a scheduled Discussion and verifies the Discussion is retried and the Vote still waits for its full discussion;
-- a full 15x match in which all 13 player clients report presence, Original Vampires submit bites through their personal endpoints, all living players vote in all three rounds, all six clues and all three Bite Windows run, four protected players are Scarred, humans are Converted, an Original Vampire dies after two failed bites, and the match reaches a verified final winner;
-- the full-match audit intentionally uses 15x rather than 60x because each protected-player Scar reveal has a 12-second real-time minimum; four Scar videos alone cannot physically complete inside a 46.5-second 60x match;
-- static assertions that the v2.46 safety/readiness/privacy changes are present in the generated production artifacts;
-- a 1920×1080 Chromium worst-case TV test with all six clues and all four Scarred cards visible at once, checking for clipped/overflowing production elements.
+- a full 15x 12-player match in which all active player clients report presence, all three Bite Windows and all three votes run, all six clues publish, all three protected players are Scarred, two Humans are Converted, an Original Vampire dies after two failed bites, every living player votes, and the match reaches a verified Humans winner;
+- explicit assertions that Yakir is absent from the roster and readiness, his old token is rejected with 404, and his scar media is not present in the deployed build;
+- the full-match audit intentionally remains at 15x because three Scar reveals alone require at least 36 seconds of real display time, leaving too little room at 60x for the other queued clues, eliminations and conversion reveals to be validated honestly;
+- static assertions that the v2.48 roster plus the existing safety/readiness/privacy changes are present in the generated production artifacts;
+- a 1920×1080 Chromium worst-case TV test with all six clues and all three Scarred cards visible at once, checking for clipped/overflowing production elements;
+- a Host Chromium test that verifies the 12-player roster, three protected Humans, Yakir's absence, and persistence of the collapsible Host sections across live refreshes.
 
 ## Intentional operational limitation
 
