@@ -89,6 +89,7 @@ run_hotfix("tv_layout_v243_hotfix.py")
 run_hotfix("tal_intro_v244_hotfix.py")
 run_hotfix("scar_card_v245_hotfix.py")
 run_hotfix("audit_frontend_v246_hotfix.py")
+run_hotfix("host_details_persistence_hotfix.py")
 run_hotfix("screen_runtime_hotfix.py")
 
 # Static build marker lets an already-open /screen detect a newer deploy.
