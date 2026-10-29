@@ -13,6 +13,7 @@ os.environ.setdefault("HOST_KEY", "ci-host-key")
 import app as game  # noqa: E402
 
 KEY = "ci-host-key"
+YAKIR_TOKEN = "s3BgxBpB4Iyfmv5Od2nCL17a"
 
 
 def host_state(client):
@@ -89,27 +90,41 @@ def test_scheduler_retries_blocked_event_and_preserves_discussion_duration():
 
 
 def test_full_game_all_players_participate_end_to_end():
-    """A complete accelerated match through the real HTTP API and scheduler.
+    """A complete accelerated 12-player match through the real HTTP API.
 
-    The full audit runs at 15x rather than 60x because protected-player Scar
-    videos intentionally remain on the public screen for at least 12 real
-    seconds. At 60x four Scar videos alone take longer than the entire 46.5 s
-    match, so a 60x run cannot honestly validate that every scheduled visual
-    event was actually published before the final vote.
+    Yakir is intentionally absent from the party-night roster. The audit still
+    exercises all three Bite Windows, all three votes, all six clues, all three
+    remaining protected Humans, conversion, an Original Vampire death after two
+    failed protected bites, and a final Humans victory.
+
+    The full audit runs at 15x rather than 60x because Scar videos intentionally
+    remain on the public screen for a real-time minimum.
 
     Scenario:
-      W1: Shalev→Gal (scar), Ellen→Dan (convert), Yonatan→Yakir (scar)
-      W2: Shalev→Tal (second failed bite => dies), Ellen→Ori (scar),
-          Yonatan→Maor (convert)
-      W3: no original has bites remaining
-      Votes eliminate Rafael, Lutz, Kiso; every living player votes each round.
+      W1: Shalev→Gal (scar), Ellen→Dan (convert)
+      W2: Shalev→Tal (second failed bite => dies), Ellen→Ori (scar)
+      W3: Yonatan→Maor (convert)
+      Votes eliminate Rafael, Lutz, then converted Dan; every living player
+      votes through their personal endpoint in every round.
     """
     with TestClient(game.app) as client:
         reset(client)
         configure_speed(client, 15)
         hs = host_state(client)
         players = {p["id"]: p for p in hs["players"]}
-        assert len(players) == 13
+
+        expected_ids = {
+            "shalev", "gal", "dan", "alan", "kiso", "hacker",
+            "yonatan", "tal", "maor", "rafael", "lutz", "uri",
+        }
+        assert len(players) == 12
+        assert set(players) == expected_ids
+        assert "yakir" not in players
+        assert game.get_player_by_token(YAKIR_TOKEN) is None
+        assert {p["id"] for p in game.state["players"] if p.get("protected")} == {"gal", "tal", "uri"}
+
+        old_link = client.get(f"/api/me/{YAKIR_TOKEN}")
+        assert old_link.status_code == 404, old_link.text
 
         for p in players.values():
             r = client.post(f"/api/player/{p['token']}/presence")
@@ -117,16 +132,18 @@ def test_full_game_all_players_participate_end_to_end():
         ready = client.get("/api/host/readiness", params={"key": KEY})
         assert ready.status_code == 200
         ready_json = ready.json()
-        assert len(ready_json["players"]) == 13
+        assert len(ready_json["players"]) == 12
+        assert {p["id"] for p in ready_json["players"]} == expected_ids
         assert all(p["online"] for p in ready_json["players"])
 
         post_host(client, "/api/host/start")
 
         bite_plan = {
-            1: {"shalev": "gal", "alan": "dan", "yonatan": "yakir"},
-            2: {"shalev": "tal", "alan": "uri", "yonatan": "maor"},
+            1: {"shalev": "gal", "alan": "dan"},
+            2: {"shalev": "tal", "alan": "uri"},
+            3: {"yonatan": "maor"},
         }
-        vote_targets = {1: "rafael", 2: "lutz", 3: "kiso"}
+        vote_targets = {1: "rafael", 2: "lutz", 3: "dan"}
         bites_sent = set()
         votes_sent = set()
         vote_participation = {1: set(), 2: set(), 3: set()}
@@ -197,37 +214,43 @@ def test_full_game_all_players_participate_end_to_end():
         assert sorted(game.state["publishedClues"]) == [0, 1, 2, 3, 4, 5]
 
         internal = {p["id"]: p for p in game.state["players"]}
-        assert {p["playerId"] for p in game.state["scarLoop"]} == {"gal", "yakir", "tal", "uri"}
-        assert all(internal[p]["scarred"] for p in ("gal", "yakir", "tal", "uri"))
+        assert set(internal) == expected_ids
+        assert {p["playerId"] for p in game.state["scarLoop"]} == {"gal", "tal", "uri"}
+        assert all(internal[p]["scarred"] for p in ("gal", "tal", "uri"))
         assert internal["dan"]["currentRole"] == "converted"
         assert internal["maor"]["currentRole"] == "converted"
         assert internal["shalev"]["alive"] is False
         assert internal["shalev"]["failedBites"] == 2
         assert internal["rafael"]["alive"] is False
         assert internal["lutz"]["alive"] is False
-        assert internal["kiso"]["alive"] is False
+        assert internal["dan"]["alive"] is False
 
         assert bites_sent == {
-            (1, "shalev"), (1, "alan"), (1, "yonatan"),
-            (2, "shalev"), (2, "alan"), (2, "yonatan"),
+            (1, "shalev"), (1, "alan"),
+            (2, "shalev"), (2, "alan"),
+            (3, "yonatan"),
         }
-        assert len(vote_participation[1]) == 13
-        assert len(vote_participation[2]) == 11
-        assert len(vote_participation[3]) == 10
+        assert len(vote_participation[1]) == 12
+        assert len(vote_participation[2]) == 10
+        assert len(vote_participation[3]) == 9
 
         assert game.scheduler_health["errors"] == 0, game.scheduler_health
         expected_fired = {f"{typ}:{at}:{val}" for at, typ, val in game.SCHEDULE}
         assert expected_fired.issubset(set(game.state["fired"]))
 
 
-def test_v247_safety_surfaces_are_in_built_artifacts():
+def test_v248_safety_surfaces_are_in_built_artifacts():
     player = (DEPLOYED / "public" / "player.html").read_text(encoding="utf-8")
     host = (DEPLOYED / "public" / "host.html").read_text(encoding="utf-8")
     screen = (DEPLOYED / "public" / "screen.html").read_text(encoding="utf-8")
     app_source = (DEPLOYED / "app.py").read_text(encoding="utf-8")
     build = (DEPLOYED / "public" / "build.txt").read_text(encoding="utf-8").strip()
 
-    assert build == "v2.47"
+    assert build == "v2.48"
+    assert "# v2.48 roster: Yakir removed" in app_source
+    assert "id='yakir'" not in app_source
+    assert YAKIR_TOKEN not in app_source
+    assert not (DEPLOYED / "public" / "scars" / "yakir.mp4").exists()
     assert "v2.46 audit hardening" in app_source
     assert "ttl=90" in app_source
     assert "vote already cast" in app_source
