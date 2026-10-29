@@ -172,7 +172,6 @@ def test_full_game_all_players_participate_end_to_end():
             if hs.get("votesOpen"):
                 round_no = int(hs["currentRound"])
                 target_id = vote_targets[round_no]
-                current = {p["id"]: p for p in hs["players"]}
                 alive = [p for p in hs["players"] if p.get("alive", True)]
                 for voter in alive:
                     marker = (round_no, voter["id"])
@@ -199,8 +198,11 @@ def test_full_game_all_players_participate_end_to_end():
         final = host_state(client)
         assert final["status"] == "finished"
         assert final["winner"]["side"] == "humans"
-        assert sorted(final["completedVoteRounds"]) == [1, 2, 3]
-        assert len(final["publishedClues"]) == 6
+
+        # These are intentionally internal lifecycle fields, not host API
+        # presentation fields, so assert them directly against the running game.
+        assert sorted(game.state["completedVoteRounds"]) == [1, 2, 3]
+        assert len(game.state["publishedClues"]) == 6
 
         internal = {p["id"]: p for p in game.state["players"]}
         assert {p["id"] for p in game.state["scarLoop"]} == {"gal", "yakir", "tal", "uri"}
@@ -219,8 +221,8 @@ def test_full_game_all_players_participate_end_to_end():
             (1, "shalev"), (1, "alan"), (1, "yonatan"),
             (2, "shalev"), (2, "alan"), (2, "yonatan"),
         }
-        assert len(vote_participation[1]) == 12  # Shalev is dead by Vote 1.
-        assert len(vote_participation[2]) == 11  # Rafael eliminated in Vote 1.
+        assert len(vote_participation[1]) == 13  # No deaths before Vote 1.
+        assert len(vote_participation[2]) == 11  # Rafael + Shalev are dead by Vote 2.
         assert len(vote_participation[3]) == 10  # Lutz eliminated in Vote 2.
 
         # Scheduler watchdog stayed healthy and all schedule items through the
