@@ -38,11 +38,11 @@ def wait_until(predicate, timeout=8.0, interval=0.05, message="condition"):
     raise AssertionError(f"Timed out waiting for {message}; last={last!r}")
 
 
-def configure_60x(client):
+def configure_speed(client, speed):
     r = client.post(
         "/api/host/test-config",
         params={"key": KEY},
-        json={"enabled": True, "speed": 60},
+        json={"enabled": True, "speed": speed},
     )
     assert r.status_code == 200, r.text
 
@@ -57,7 +57,7 @@ def test_scheduler_retries_blocked_event_and_preserves_discussion_duration():
     """
     with TestClient(game.app) as client:
         reset(client)
-        configure_60x(client)
+        configure_speed(client, 60)
         post_host(client, "/api/host/start")
 
         # Jump the game clock to just before Discussion 1, while marking all
@@ -100,6 +100,12 @@ def test_scheduler_retries_blocked_event_and_preserves_discussion_duration():
 def test_full_game_all_players_participate_end_to_end():
     """A complete accelerated match through the real HTTP API and scheduler.
 
+    The full audit runs at 15x rather than 60x because protected-player Scar
+    videos intentionally remain on the public screen for at least 12 real
+    seconds. At 60x four Scar videos alone take longer than the entire 46.5 s
+    match, so a 60x run cannot honestly validate that every scheduled visual
+    event was actually published before the final vote.
+
     Scenario:
       W1: Shalev→Gal (scar), Ellen→Dan (convert), Yonatan→Yakir (scar)
       W2: Shalev→Tal (second failed bite => dies), Ellen→Ori (scar),
@@ -109,7 +115,7 @@ def test_full_game_all_players_participate_end_to_end():
     """
     with TestClient(game.app) as client:
         reset(client)
-        configure_60x(client)
+        configure_speed(client, 15)
         hs = host_state(client)
         players = {p["id"]: p for p in hs["players"]}
         assert len(players) == 13
@@ -136,7 +142,7 @@ def test_full_game_all_players_participate_end_to_end():
         votes_sent = set()
         vote_participation = {1: set(), 2: set(), 3: set()}
         last_presence = 0.0
-        deadline = time.time() + 70
+        deadline = time.time() + 230
 
         while time.time() < deadline:
             hs = host_state(client)
@@ -193,7 +199,7 @@ def test_full_game_all_players_participate_end_to_end():
 
             time.sleep(0.04)
         else:
-            raise AssertionError("Full game did not finish within 70 real seconds at 60x")
+            raise AssertionError("Full game did not finish within 230 real seconds at 15x")
 
         final = host_state(client)
         assert final["status"] == "finished"
@@ -202,7 +208,7 @@ def test_full_game_all_players_participate_end_to_end():
         # These are intentionally internal lifecycle fields, not host API
         # presentation fields, so assert them directly against the running game.
         assert sorted(game.state["completedVoteRounds"]) == [1, 2, 3]
-        assert len(game.state["publishedClues"]) == 6
+        assert sorted(game.state["publishedClues"]) == [0, 1, 2, 3, 4, 5]
 
         internal = {p["id"]: p for p in game.state["players"]}
         assert {p["id"] for p in game.state["scarLoop"]} == {"gal", "yakir", "tal", "uri"}
@@ -225,8 +231,8 @@ def test_full_game_all_players_participate_end_to_end():
         assert len(vote_participation[2]) == 11  # Rafael + Shalev are dead by Vote 2.
         assert len(vote_participation[3]) == 10  # Lutz eliminated in Vote 2.
 
-        # Scheduler watchdog stayed healthy and all schedule items through the
-        # final vote were consumed exactly once.
+        # Scheduler watchdog stayed healthy and every scheduled event was
+        # consumed once in the completed match.
         assert game.scheduler_health["errors"] == 0, game.scheduler_health
         expected_fired = {f"{typ}:{at}:{val}" for at, typ, val in game.SCHEDULE}
         assert expected_fired.issubset(set(game.state["fired"]))
