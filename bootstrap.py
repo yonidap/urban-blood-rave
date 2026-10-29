@@ -8,7 +8,7 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parent
 TARGET = ROOT / "deployed"
-BUILD = "v2.46"
+BUILD = "v2.47"
 
 BASE_PARTS = [
     ROOT / "deploy_bundle" / "bundle.part01",
