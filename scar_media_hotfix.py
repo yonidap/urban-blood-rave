@@ -13,9 +13,13 @@ if "scarVideo='/scars/uri.mp4'" in app:
 elif "scarVideo='/scars/ori.mp4'" not in app:
     raise SystemExit("scar media hotfix: Ori scarVideo mapping not found")
 
-for path in ["/scars/gal.mp4", "/scars/yakir.mp4", "/scars/tal.mp4", "/scars/ori.mp4"]:
+# v2.48 party-night roster has three active protected Humans. Yakir is not
+# attending and is removed from PLAYERS_SEED before this validation runs.
+for path in ["/scars/gal.mp4", "/scars/tal.mp4", "/scars/ori.mp4"]:
     if path not in app:
         raise SystemExit(f"scar media hotfix: missing app mapping {path}")
+if "/scars/yakir.mp4" in app:
+    raise SystemExit("scar media hotfix: Yakir mapping still present after roster removal")
 
 app_path.write_text(app, encoding="utf-8")
-print("Applied protected-player scar media mapping (Gal/Yakir/Tal/Ori).")
+print("Applied protected-player scar media mapping (Gal/Tal/Ori).")
