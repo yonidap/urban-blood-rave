@@ -28,10 +28,21 @@ for name in [
     "open_vote",
     "resolve_vote",
     "show_clue",
-    "process_bite",
-    "check_win_conditions",
-    "reset_game",
-    "start_game",
+    "maybe_finalize_bite_window",
+    "resolve_bite_after_delay",
+    "check_early_win",
+    "finish_game",
+    "api_start",
+    "api_reset",
+    "api_resolve_vote",
+    "api_clue",
+    "api_bite_window",
+    "api_discussion",
+    "api_vote_open",
+    "bite",
+    "vote",
+    "api_host_state",
+    "me",
 ]:
     fn = getattr(game, name, None)
     if fn is None:
@@ -44,5 +55,12 @@ for name in [
         print(f"SOURCE ERROR: {exc}")
 
 print("\n=== PLAYERS ===")
-for p in game.players:
-    print({k: p.get(k) for k in ("id","name","initialRole","currentRole","protected","token","scarVideo")})
+for p in game.state["players"]:
+    print({k: p.get(k) for k in ("id","name","initialRole","currentRole","protected","token","scarVideo","alive","bitesRemaining","failedBites")})
+
+print("\n=== SCHEDULE ===")
+print(getattr(game, "SCHEDULE", None))
+print("GAME_DURATION_SEC", getattr(game, "GAME_DURATION_SEC", None))
+print("BITE_WINDOW_SEC", getattr(game, "BITE_WINDOW_SEC", None))
+print("VOTE_DURATION_SEC", getattr(game, "VOTE_DURATION_SEC", None))
+print("DISCUSSION_DURATION_SEC", getattr(game, "DISCUSSION_DURATION_SEC", None))
